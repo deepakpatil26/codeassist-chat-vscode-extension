@@ -1,0 +1,35 @@
+{
+  "name": "codeassist-chat",
+  "displayName": "CodeAssist Chat",
+  "description": "A web-based chat panel for VS Code.",
+  "version": "0.0.1",
+  "publisher": "your-name-here",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codeassist-chat.start",
+        "title": "CodeAssist Chat: Start"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.3"
+  }
+}
