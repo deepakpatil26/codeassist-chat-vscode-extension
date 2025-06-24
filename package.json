@@ -30,5 +30,9 @@
     "@types/vscode": "^1.85.0",
     "@types/node": "20.x",
     "typescript": "^5.3.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/deepakpatil26/codeassist-chat-vscode-extension.git"
   }
 }
