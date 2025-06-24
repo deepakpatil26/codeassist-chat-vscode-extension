@@ -42,7 +42,7 @@ export function activate(context: vscode.ExtensionContext) {
                 </style>
             </head>
             <body>
-                <iframe src="http://localhost:9002" frameBorder="0"></iframe>
+                <iframe src="https://codeassist-chat-app.vercel.app/" frameBorder="0"></iframe>
             </body>
             </html>
         `;
