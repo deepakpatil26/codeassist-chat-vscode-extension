@@ -3,7 +3,7 @@
   "displayName": "CodeAssist Chat",
   "description": "A web-based chat panel for VS Code.",
   "version": "0.0.1",
-  "publisher": "your-name-here",
+  "publisher": "your-publisher-name-here",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -27,9 +27,8 @@
     "lint": "eslint src --ext ts"
   },
   "devDependencies": {
-    "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
     "@types/vscode": "^1.85.0",
+    "@types/node": "20.x",
     "typescript": "^5.3.3"
   }
 }

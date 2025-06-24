@@ -116,7 +116,7 @@ async function handleGetFileContent(
 
     const fileUri = vscode.Uri.joinPath(workspaceFolders[0].uri, fileName);
     const fileContentBytes = await vscode.workspace.fs.readFile(fileUri);
-    const content = Buffer.from(fileContentBytes).toString('base64');
+    const content = Buffer.from(fileContentBytes).toString('utf8');
 
     webview.postMessage({
       requestId,
