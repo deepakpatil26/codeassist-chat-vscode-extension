@@ -1,51 +1,36 @@
-# codeassist-chat README
+# codeassist-chat
 
-This is the README for your extension "codeassist-chat". After writing up a brief description, we recommend including the following sections.
+A Visual Studio Code extension that provides AI-powered code assistance and chat directly in your editor.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+- Chat with an AI assistant about your code
+- Get code explanations and suggestions
+- Generate and run code snippets
+- Supports multiple programming languages
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- Node.js 18+
+- Internet connection for AI features
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
 This extension contributes the following settings:
 
-- `myExtension.enable`: Enable/disable this extension.
-- `myExtension.thing`: Set to `blah` to do something.
+- `codeassist-chat.enable`: Enable/disable the extension.
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- Some responses may be slow if the network is busy.
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
 ### 1.1.0
 
-Added features X, Y, and Z.
+- Added AI chat support for Python and JavaScript.
+- Improved code explanation accuracy.
+- Fixed minor UI bugs.
 
 ---
 
@@ -57,11 +42,7 @@ Ensure that you've read through the extensions guidelines and follow the best pr
 
 ## Working with Markdown
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-- Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-- Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-- Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+You can author your README using Visual Studio Code.
 
 ## For more information
 
