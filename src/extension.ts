@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { Buffer } from 'buffer';
 
 const panels = new Map<string, vscode.WebviewPanel>();
 
@@ -6,14 +7,14 @@ export function activate(context: vscode.ExtensionContext) {
   const startCommand = vscode.commands.registerCommand(
     'codeassist-chat.start',
     () => {
-      createOrShowPanel(context.extensionUri);
+      createOrShowPanel(context);
     }
   );
 
   const summarizeCommand = vscode.commands.registerCommand(
     'codeassist-chat.summarizeFile',
     (uri: vscode.Uri) => {
-      const panel = createOrShowPanel(context.extensionUri);
+      const panel = createOrShowPanel(context);
       const fileName = vscode.workspace.asRelativePath(uri, false);
       panel.webview.postMessage({
         command: 'startNewChat',
@@ -25,7 +26,7 @@ export function activate(context: vscode.ExtensionContext) {
   const refactorCommand = vscode.commands.registerCommand(
     'codeassist-chat.refactorFile',
     (uri: vscode.Uri) => {
-      const panel = createOrShowPanel(context.extensionUri);
+      const panel = createOrShowPanel(context);
       const fileName = vscode.workspace.asRelativePath(uri, false);
       panel.webview.postMessage({
         command: 'startNewChat',
@@ -37,7 +38,9 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(startCommand, summarizeCommand, refactorCommand);
 }
 
-function createOrShowPanel(extensionUri: vscode.Uri): vscode.WebviewPanel {
+function createOrShowPanel(
+  context: vscode.ExtensionContext
+): vscode.WebviewPanel {
   const column = vscode.window.activeTextEditor
     ? vscode.ViewColumn.Beside
     : vscode.ViewColumn.One;
@@ -59,8 +62,12 @@ function createOrShowPanel(extensionUri: vscode.Uri): vscode.WebviewPanel {
   );
 
   panels.set('codeassist-chat', panel);
-  panel.onDidDispose(() => panels.delete('codeassist-chat'), null, []);
-  panel.webview.html = getWebviewContent(panel.webview);
+  panel.onDidDispose(
+    () => panels.delete('codeassist-chat'),
+    null,
+    context.subscriptions
+  );
+  panel.webview.html = getWebviewContent(panel.webview, context.extensionUri);
 
   panel.webview.onDidReceiveMessage(async (message) => {
     const { command, data } = message;
@@ -80,6 +87,7 @@ function createOrShowPanel(extensionUri: vscode.Uri): vscode.WebviewPanel {
   const onFileChange = () => handleGetWorkspaceFiles(panel.webview);
   watcher.onDidCreate(onFileChange);
   watcher.onDidDelete(onFileChange);
+  context.subscriptions.push(watcher);
 
   return panel;
 }
@@ -135,9 +143,10 @@ async function handleGetFileContent(
   }
 }
 
-function getWebviewContent(webview: vscode.Webview): string {
-  // *** IMPORTANT ***
-  // This must be the public URL of your deployed Next.js web app.
+function getWebviewContent(
+  webview: vscode.Webview,
+  extensionUri: vscode.Uri
+): string {
   const appUrl = 'https://codeassist-chat-app.vercel.app';
 
   return `
@@ -146,14 +155,15 @@ function getWebviewContent(webview: vscode.Webview): string {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>CodeAssist Chat</title>
         <meta http-equiv="Content-Security-Policy" content="
             default-src 'none';
-            frame-src ${appUrl};
-            style-src ${appUrl} 'unsafe-inline' https://fonts.googleapis.com;
-            script-src ${appUrl};
+            style-src ${webview.cspSource} 'unsafe-inline' https://fonts.googleapis.com;
             font-src https://fonts.gstatic.com;
+            script-src 'nonce-anyRandomStringWillDo' ${webview.cspSource};
+            frame-src ${appUrl};
+            connect-src ${appUrl};
         ">
-        <title>CodeAssist Chat</title>
         <style>
             body, html, iframe {
                 margin: 0;
@@ -166,7 +176,7 @@ function getWebviewContent(webview: vscode.Webview): string {
         </style>
     </head>
     <body>
-        <iframe src="${appUrl}"></iframe>
+        <iframe nonce="anyRandomStringWillDo" src="${appUrl}"></iframe>
     </body>
     </html>`;
 }
