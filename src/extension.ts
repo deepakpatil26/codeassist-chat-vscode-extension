@@ -79,7 +79,7 @@ function createOrShowPanel(
   );
   panel.webview.html = getWebviewContent(panel.webview);
 
-  // Set up message listener
+  // Handle messages from the webview (forwarded by the bridge script)
   panel.webview.onDidReceiveMessage(async (message) => {
     const { command, data } = message;
     const { requestId } = data;
@@ -174,7 +174,29 @@ function getWebviewContent(webview: vscode.Webview): string {
         </style>
     </head>
     <body>
-        <iframe src="${appUrl}"></iframe>
+        <iframe id="app-frame" src="${appUrl}"></iframe>
+        <script>
+            // This script acts as a bridge between the iframe and the VS Code extension host.
+            const vscode = acquireVsCodeApi();
+            const iframe = document.getElementById('app-frame');
+            const appOrigin = new URL('${appUrl}').origin;
+
+            // 1. Listen for messages from the iframe and forward them to the extension host.
+            window.addEventListener('message', event => {
+                if (event.origin === appOrigin) {
+                    vscode.postMessage(event.data);
+                }
+            });
+
+            // 2. Listen for messages from the extension host and forward them to the iframe.
+            // We can reuse the 'message' event listener because messages from the extension
+            // will not have the same origin as the iframe.
+            window.addEventListener('message', event => {
+                 if (event.origin !== appOrigin) {
+                    iframe.contentWindow.postMessage(event.data, appOrigin);
+                 }
+            });
+        </script>
     </body>
     </html>`;
 }
