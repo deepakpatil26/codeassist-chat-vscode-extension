@@ -2,7 +2,7 @@
   "name": "codeassist-chat",
   "displayName": "CodeAssist Chat",
   "description": "A web-based chat panel for VS Code.",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "publisher": "deepakpatil26",
   "engines": {
     "vscode": "^1.85.0"
