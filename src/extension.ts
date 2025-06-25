@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { Buffer } from 'buffer';
 
 const panels = new Map<string, vscode.WebviewPanel>();
 
@@ -148,6 +147,7 @@ function getWebviewContent(
   extensionUri: vscode.Uri
 ): string {
   const appUrl = 'https://codeassist-chat-app.vercel.app';
+  const nonce = getNonce();
 
   return `
     <!DOCTYPE html>
@@ -160,7 +160,7 @@ function getWebviewContent(
             default-src 'none';
             style-src ${webview.cspSource} 'unsafe-inline' https://fonts.googleapis.com;
             font-src https://fonts.gstatic.com;
-            script-src 'nonce-anyRandomStringWillDo' ${webview.cspSource};
+            script-src 'nonce-${nonce}' 'unsafe-eval';
             frame-src ${appUrl};
             connect-src ${appUrl};
         ">
@@ -176,9 +176,19 @@ function getWebviewContent(
         </style>
     </head>
     <body>
-        <iframe nonce="anyRandomStringWillDo" src="${appUrl}"></iframe>
+        <iframe nonce="${nonce}" src="${appUrl}"></iframe>
     </body>
     </html>`;
+}
+
+function getNonce() {
+  let text = '';
+  const possible =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < 32; i++) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
+  return text;
 }
 
 export function deactivate() {}
