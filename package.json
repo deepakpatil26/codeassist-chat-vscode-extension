@@ -4,6 +4,10 @@
   "description": "A web-based chat panel for VS Code.",
   "version": "0.0.4",
   "publisher": "deepakpatil26",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/deepakpatil26/codeassist-chat-vscode-extension.git"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -48,7 +52,6 @@
     "watch": "tsc -watch -p ./"
   },
   "devDependencies": {
-    "@types/mocha": "^10.0.10",
     "@types/node": "^24.0.4",
     "@types/vscode": "^1.85.0",
     "typescript": "^5.3.3"
