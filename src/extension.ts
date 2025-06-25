@@ -1,84 +1,89 @@
 import * as vscode from 'vscode';
 
-// A map to store our webview panel. We only want one instance.
 const panels = new Map<string, vscode.WebviewPanel>();
 
-// This function is called when your extension is activated
 export function activate(context: vscode.ExtensionContext) {
-  console.log(
-    'Congratulations, your extension "codeassist-chat" is now active!'
-  );
-
-  let disposable = vscode.commands.registerCommand(
+  const startCommand = vscode.commands.registerCommand(
     'codeassist-chat.start',
     () => {
-      // The command has been executed, so now we create and show a new webview panel
-      console.log('Command "codeassist-chat.start" was executed!');
-
-      // Check if a panel already exists and reveal it if it does
-      if (panels.has('codeassist-chat')) {
-        panels.get('codeassist-chat')?.reveal(vscode.ViewColumn.Beside);
-        return;
-      }
-
-      // Otherwise, create a new panel
-      const panel = vscode.window.createWebviewPanel(
-        'codeassistChat', // Identifies the type of the webview. Used internally
-        'CodeAssist Chat', // Title of the panel displayed to the user
-        vscode.ViewColumn.Beside, // Editor column to show the new webview panel in
-        {
-          enableScripts: true, // Allow scripts to run in the webview
-          retainContextWhenHidden: true, // Keep the webview's state even when it's not visible
-        }
-      );
-
-      // Store the panel so we can reference it again
-      panels.set('codeassist-chat', panel);
-
-      // When the panel is disposed (e.g., closed by the user), remove it from our map
-      panel.onDidDispose(
-        () => {
-          panels.delete('codeassist-chat');
-        },
-        null,
-        context.subscriptions
-      );
-
-      // Set the HTML content for the webview
-      panel.webview.html = getWebviewContent(panel.webview);
-
-      // Handle messages from the webview
-      panel.webview.onDidReceiveMessage(
-        async (message) => {
-          const { command, data } = message;
-          const { requestId } = data;
-
-          switch (command) {
-            case 'getWorkspaceFiles':
-              handleGetWorkspaceFiles(panel.webview, requestId);
-              return;
-            case 'getFileContent':
-              handleGetFileContent(panel.webview, data.fileName, requestId);
-              return;
-          }
-        },
-        undefined,
-        context.subscriptions
-      );
-
-      // Watch for file changes and push updates to the webview
-      const watcher = vscode.workspace.createFileSystemWatcher('**/*');
-      const onFileChange = () => handleGetWorkspaceFiles(panel.webview);
-      watcher.onDidCreate(onFileChange);
-      watcher.onDidDelete(onFileChange);
-      context.subscriptions.push(watcher);
+      createOrShowPanel(context.extensionUri);
     }
   );
 
-  context.subscriptions.push(disposable);
+  const summarizeCommand = vscode.commands.registerCommand(
+    'codeassist-chat.summarizeFile',
+    (uri: vscode.Uri) => {
+      const panel = createOrShowPanel(context.extensionUri);
+      const fileName = vscode.workspace.asRelativePath(uri, false);
+      panel.webview.postMessage({
+        command: 'startNewChat',
+        data: { fileName, prompt: 'Summarize this file' },
+      });
+    }
+  );
+
+  const refactorCommand = vscode.commands.registerCommand(
+    'codeassist-chat.refactorFile',
+    (uri: vscode.Uri) => {
+      const panel = createOrShowPanel(context.extensionUri);
+      const fileName = vscode.workspace.asRelativePath(uri, false);
+      panel.webview.postMessage({
+        command: 'startNewChat',
+        data: { fileName, prompt: 'Refactor this code: ' },
+      });
+    }
+  );
+
+  context.subscriptions.push(startCommand, summarizeCommand, refactorCommand);
 }
 
-// Function to get all workspace files and send them to the webview
+function createOrShowPanel(extensionUri: vscode.Uri): vscode.WebviewPanel {
+  const column = vscode.window.activeTextEditor
+    ? vscode.ViewColumn.Beside
+    : vscode.ViewColumn.One;
+
+  if (panels.has('codeassist-chat')) {
+    const panel = panels.get('codeassist-chat')!;
+    panel.reveal(column);
+    return panel;
+  }
+
+  const panel = vscode.window.createWebviewPanel(
+    'codeassistChat',
+    'CodeAssist Chat',
+    column,
+    {
+      enableScripts: true,
+      retainContextWhenHidden: true,
+    }
+  );
+
+  panels.set('codeassist-chat', panel);
+  panel.onDidDispose(() => panels.delete('codeassist-chat'), null, []);
+  panel.webview.html = getWebviewContent(panel.webview);
+
+  panel.webview.onDidReceiveMessage(async (message) => {
+    const { command, data } = message;
+    const { requestId } = data;
+
+    switch (command) {
+      case 'getWorkspaceFiles':
+        handleGetWorkspaceFiles(panel.webview, requestId);
+        return;
+      case 'getFileContent':
+        handleGetFileContent(panel.webview, data.fileName, requestId);
+        return;
+    }
+  });
+
+  const watcher = vscode.workspace.createFileSystemWatcher('**/*');
+  const onFileChange = () => handleGetWorkspaceFiles(panel.webview);
+  watcher.onDidCreate(onFileChange);
+  watcher.onDidDelete(onFileChange);
+
+  return panel;
+}
+
 async function handleGetWorkspaceFiles(
   webview: vscode.Webview,
   requestId?: string
@@ -95,8 +100,8 @@ async function handleGetWorkspaceFiles(
     });
 
     webview.postMessage({
-      command: 'workspaceFiles', // For general listeners
-      requestId: requestId, // For one-time requests
+      command: 'workspaceFiles',
+      requestId: requestId,
       data: { files: fileData },
     });
   } catch (error) {
@@ -104,7 +109,6 @@ async function handleGetWorkspaceFiles(
   }
 }
 
-// Function to read a specific file's content and send it to the webview
 async function handleGetFileContent(
   webview: vscode.Webview,
   fileName: string,
@@ -116,7 +120,6 @@ async function handleGetFileContent(
 
     const fileUri = vscode.Uri.joinPath(workspaceFolders[0].uri, fileName);
     const fileContentBytes = await vscode.workspace.fs.readFile(fileUri);
-    // Encode the content to Base64 before sending to ensure all file types are handled safely
     const content = Buffer.from(fileContentBytes).toString('base64');
 
     webview.postMessage({
@@ -133,7 +136,8 @@ async function handleGetFileContent(
 }
 
 function getWebviewContent(webview: vscode.Webview): string {
-  // Use the live URL from your Vercel deployment
+  // *** IMPORTANT ***
+  // This must be the public URL of your deployed Next.js web app.
   const appUrl = 'https://codeassist-chat-app.vercel.app';
 
   return `
@@ -145,7 +149,7 @@ function getWebviewContent(webview: vscode.Webview): string {
         <meta http-equiv="Content-Security-Policy" content="
             default-src 'none';
             frame-src ${appUrl};
-            style-src ${appUrl} 'unsafe-inline';
+            style-src ${appUrl} 'unsafe-inline' https://fonts.googleapis.com;
             script-src ${appUrl};
             font-src https://fonts.gstatic.com;
         ">
@@ -167,5 +171,4 @@ function getWebviewContent(webview: vscode.Webview): string {
     </html>`;
 }
 
-// This function is called when your extension is deactivated
 export function deactivate() {}

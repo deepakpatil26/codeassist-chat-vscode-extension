@@ -2,7 +2,7 @@
   "name": "codeassist-chat",
   "displayName": "CodeAssist Chat",
   "description": "A web-based chat panel for VS Code.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "deepakpatil26",
   "engines": {
     "vscode": "^1.85.0"
@@ -17,23 +17,38 @@
       {
         "command": "codeassist-chat.start",
         "title": "CodeAssist Chat: Start"
+      },
+      {
+        "command": "codeassist-chat.summarizeFile",
+        "title": "CodeAssist: Summarize this file"
+      },
+      {
+        "command": "codeassist-chat.refactorFile",
+        "title": "CodeAssist: Refactor this file"
       }
-    ]
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "when": "resourceLangId",
+          "command": "codeassist-chat.summarizeFile",
+          "group": "navigation"
+        },
+        {
+          "when": "resourceLangId",
+          "command": "codeassist-chat.refactorFile",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "lint": "eslint src --ext ts"
+    "watch": "tsc -watch -p ./"
   },
   "devDependencies": {
-    "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
     "@types/vscode": "^1.85.0",
     "typescript": "^5.3.3"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/deepakpatil26/codeassist-chat-vscode-extension.git"
   }
 }
