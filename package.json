@@ -2,13 +2,13 @@
   "name": "codeassist-chat",
   "displayName": "CodeAssist Chat",
   "description": "A web-based chat panel for VS Code.",
-  "version": "0.0.5",
-  "license": "MIT",
+  "version": "1.0.0",
   "publisher": "deepakpatil26",
   "repository": {
     "type": "git",
     "url": "https://github.com/deepakpatil26/codeassist-chat-vscode-extension.git"
   },
+  "license": "MIT",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -54,8 +54,9 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
+    "@types/node": "^20.11.20",
     "@types/vscode": "^1.85.0",
+    "mocha": "^11.7.1",
     "typescript": "^5.3.3"
   }
 }

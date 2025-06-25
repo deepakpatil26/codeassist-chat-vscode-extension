@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { Buffer } from 'buffer';
 
 const panels = new Map<string, vscode.WebviewPanel>();
 
@@ -13,6 +14,11 @@ export function activate(context: vscode.ExtensionContext) {
   const summarizeCommand = vscode.commands.registerCommand(
     'codeassist-chat.summarizeFile',
     (uri: vscode.Uri) => {
+      if (!uri) {
+        uri = vscode.window.activeTextEditor?.document.uri!;
+      }
+      if (!uri) return;
+
       const panel = createOrShowPanel(context);
       const fileName = vscode.workspace.asRelativePath(uri, false);
       panel.webview.postMessage({
@@ -25,6 +31,11 @@ export function activate(context: vscode.ExtensionContext) {
   const refactorCommand = vscode.commands.registerCommand(
     'codeassist-chat.refactorFile',
     (uri: vscode.Uri) => {
+      if (!uri) {
+        uri = vscode.window.activeTextEditor?.document.uri!;
+      }
+      if (!uri) return;
+
       const panel = createOrShowPanel(context);
       const fileName = vscode.workspace.asRelativePath(uri, false);
       panel.webview.postMessage({
@@ -66,12 +77,12 @@ function createOrShowPanel(
     null,
     context.subscriptions
   );
-  panel.webview.html = getWebviewContent(panel.webview, context.extensionUri);
+  panel.webview.html = getWebviewContent(panel.webview);
 
+  // Set up message listener
   panel.webview.onDidReceiveMessage(async (message) => {
     const { command, data } = message;
     const { requestId } = data;
-
     switch (command) {
       case 'getWorkspaceFiles':
         handleGetWorkspaceFiles(panel.webview, requestId);
@@ -82,6 +93,7 @@ function createOrShowPanel(
     }
   });
 
+  // Set up file watcher
   const watcher = vscode.workspace.createFileSystemWatcher('**/*');
   const onFileChange = () => handleGetWorkspaceFiles(panel.webview);
   watcher.onDidCreate(onFileChange);
@@ -105,10 +117,9 @@ async function handleGetWorkspaceFiles(
       const type = /\.(jpg|jpeg|png|gif|svg)$/i.test(path) ? 'image' : 'file';
       return { name: path, type };
     });
-
     webview.postMessage({
       command: 'workspaceFiles',
-      requestId: requestId,
+      requestId,
       data: { files: fileData },
     });
   } catch (error) {
@@ -124,11 +135,9 @@ async function handleGetFileContent(
   try {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) throw new Error('No workspace is open.');
-
     const fileUri = vscode.Uri.joinPath(workspaceFolders[0].uri, fileName);
     const fileContentBytes = await vscode.workspace.fs.readFile(fileUri);
     const content = Buffer.from(fileContentBytes).toString('base64');
-
     webview.postMessage({
       requestId,
       data: { content },
@@ -136,18 +145,14 @@ async function handleGetFileContent(
   } catch (error) {
     console.error(`Error reading file ${fileName}:`, error);
     webview.postMessage({
-      requestId: requestId,
+      requestId,
       data: { content: null, error: `Could not read file: ${fileName}` },
     });
   }
 }
 
-function getWebviewContent(
-  webview: vscode.Webview,
-  extensionUri: vscode.Uri
-): string {
+function getWebviewContent(webview: vscode.Webview): string {
   const appUrl = 'https://codeassist-chat-app.vercel.app';
-  const nonce = getNonce();
 
   return `
     <!DOCTYPE html>
@@ -158,37 +163,20 @@ function getWebviewContent(
         <title>CodeAssist Chat</title>
         <meta http-equiv="Content-Security-Policy" content="
             default-src 'none';
-            style-src ${webview.cspSource} 'unsafe-inline' https://fonts.googleapis.com;
-            font-src https://fonts.gstatic.com;
-            script-src 'nonce-${nonce}' 'unsafe-eval';
             frame-src ${appUrl};
+            style-src 'unsafe-inline' ${webview.cspSource} https://fonts.googleapis.com;
+            font-src https://fonts.gstatic.com;
+            script-src 'unsafe-inline';
             connect-src ${appUrl};
         ">
         <style>
-            body, html, iframe {
-                margin: 0;
-                padding: 0;
-                width: 100%;
-                height: 100vh;
-                overflow: hidden;
-                border: none;
-            }
+            body, html, iframe { margin: 0; padding: 0; width: 100%; height: 100vh; overflow: hidden; border: none; }
         </style>
     </head>
     <body>
-        <iframe nonce="${nonce}" src="${appUrl}"></iframe>
+        <iframe src="${appUrl}"></iframe>
     </body>
     </html>`;
-}
-
-function getNonce() {
-  let text = '';
-  const possible =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < 32; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
 }
 
 export function deactivate() {}
