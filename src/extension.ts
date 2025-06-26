@@ -2,6 +2,9 @@ import * as vscode from 'vscode';
 import { Buffer } from 'buffer';
 
 const panels = new Map<string, vscode.WebviewPanel>();
+let lastInlineCompletion: {
+  resolve: (value: string | undefined) => void;
+} | null = null;
 
 export function activate(context: vscode.ExtensionContext) {
   const startCommand = vscode.commands.registerCommand(
@@ -45,7 +48,57 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
-  context.subscriptions.push(startCommand, summarizeCommand, refactorCommand);
+  // Register inline completion provider
+  const inlineProvider = vscode.languages.registerInlineCompletionItemProvider(
+    { pattern: '**' },
+    {
+      async provideInlineCompletionItems(
+        document,
+        position,
+        _inlineContext,
+        token
+      ) {
+        // Get the current line text up to the cursor
+        const line = document
+          .lineAt(position.line)
+          .text.substring(0, position.character);
+        const panel = createOrShowPanel(context);
+
+        // Send request to webview app for inline suggestion
+        panel.webview.postMessage({
+          command: 'inlineCompletion',
+          data: {
+            language: document.languageId,
+            line,
+            fileName: vscode.workspace.asRelativePath(document.uri, false),
+          },
+        });
+
+        // Wait for response from webview (with a timeout)
+        const suggestion = await new Promise<string | undefined>((resolve) => {
+          lastInlineCompletion = { resolve };
+          setTimeout(() => resolve(undefined), 2000); // 2s timeout
+        });
+
+        if (suggestion) {
+          return [
+            {
+              insertText: suggestion,
+              range: new vscode.Range(position, position),
+            },
+          ];
+        }
+        return [];
+      },
+    }
+  );
+
+  context.subscriptions.push(
+    startCommand,
+    summarizeCommand,
+    refactorCommand,
+    inlineProvider
+  );
 }
 
 function createOrShowPanel(
@@ -82,13 +135,22 @@ function createOrShowPanel(
   // Handle messages from the webview (forwarded by the bridge script)
   panel.webview.onDidReceiveMessage(async (message) => {
     const { command, data } = message;
-    const { requestId } = data;
+    const { requestId } = data || {};
     switch (command) {
       case 'getWorkspaceFiles':
         handleGetWorkspaceFiles(panel.webview, requestId);
         return;
       case 'getFileContent':
         handleGetFileContent(panel.webview, data.fileName, requestId);
+        return;
+      case 'insertText':
+        insertTextAtCursor(data.text);
+        return;
+      case 'inlineCompletionResult':
+        if (lastInlineCompletion) {
+          lastInlineCompletion.resolve(data.suggestion);
+          lastInlineCompletion = null;
+        }
         return;
     }
   });
@@ -151,6 +213,16 @@ async function handleGetFileContent(
   }
 }
 
+// Insert text at the current cursor position in the active editor
+function insertTextAtCursor(text: string) {
+  const editor = vscode.window.activeTextEditor;
+  if (editor) {
+    editor.edit((editBuilder) => {
+      editBuilder.insert(editor.selection.active, text);
+    });
+  }
+}
+
 function getWebviewContent(webview: vscode.Webview): string {
   const appUrl = 'https://codeassist-chat-app.vercel.app';
 
@@ -189,8 +261,6 @@ function getWebviewContent(webview: vscode.Webview): string {
             });
 
             // 2. Listen for messages from the extension host and forward them to the iframe.
-            // We can reuse the 'message' event listener because messages from the extension
-            // will not have the same origin as the iframe.
             window.addEventListener('message', event => {
                  if (event.origin !== appOrigin) {
                     iframe.contentWindow.postMessage(event.data, appOrigin);
