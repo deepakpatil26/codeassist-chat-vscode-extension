@@ -4,6 +4,11 @@
   "description": "A web-based chat panel for VS Code.",
   "version": "1.0.2",
   "publisher": "deepakpatil26",
+  "icon": "codeassist-chat-vscode-extension/images/codeassist-chat-logo.png",
+  "galleryBanner": {
+    "color": "#0098FF",
+    "theme": "dark"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/deepakpatil26/codeassist-chat-vscode-extension.git"
