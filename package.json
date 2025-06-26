@@ -4,7 +4,7 @@
   "description": "A web-based chat panel for VS Code.",
   "version": "1.0.2",
   "publisher": "deepakpatil26",
-  "icon": "images/codeassist-chat-logo.png",
+  "icon": "images/codeassist-chat-logo_imresizer.png",
   "galleryBanner": {
     "color": "#0098FF",
     "theme": "dark"
