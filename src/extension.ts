@@ -17,8 +17,8 @@ export function activate(context: vscode.ExtensionContext) {
   const summarizeCommand = vscode.commands.registerCommand(
     'codeassist-chat.summarizeFile',
     (uri: vscode.Uri) => {
-      if (!uri) {
-        uri = vscode.window.activeTextEditor?.document.uri!;
+      if (!uri && vscode.window.activeTextEditor) {
+        uri = vscode.window.activeTextEditor.document.uri;
       }
       if (!uri) return;
 
@@ -34,8 +34,8 @@ export function activate(context: vscode.ExtensionContext) {
   const refactorCommand = vscode.commands.registerCommand(
     'codeassist-chat.refactorFile',
     (uri: vscode.Uri) => {
-      if (!uri) {
-        uri = vscode.window.activeTextEditor?.document.uri!;
+      if (!uri && vscode.window.activeTextEditor) {
+        uri = vscode.window.activeTextEditor.document.uri;
       }
       if (!uri) return;
 
@@ -135,13 +135,16 @@ function createOrShowPanel(
   // Handle messages from the webview (forwarded by the bridge script)
   panel.webview.onDidReceiveMessage(async (message) => {
     const { command, data } = message;
-    const { requestId } = data || {};
+    const requestId = data?.requestId;
+
     switch (command) {
       case 'getWorkspaceFiles':
         handleGetWorkspaceFiles(panel.webview, requestId);
         return;
       case 'getFileContent':
-        handleGetFileContent(panel.webview, data.fileName, requestId);
+        if (data?.fileName && requestId) {
+          handleGetFileContent(panel.webview, data.fileName, requestId);
+        }
         return;
       case 'insertText':
         insertTextAtCursor(data.text);
@@ -179,6 +182,8 @@ async function handleGetWorkspaceFiles(
       const type = /\.(jpg|jpeg|png|gif|svg)$/i.test(path) ? 'image' : 'file';
       return { name: path, type };
     });
+
+    // This message is for both one-time requests (with requestId) and general updates
     webview.postMessage({
       command: 'workspaceFiles',
       requestId,
@@ -223,8 +228,19 @@ function insertTextAtCursor(text: string) {
   }
 }
 
+function getNonce() {
+  let text = '';
+  const possible =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < 32; i++) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
+  return text;
+}
+
 function getWebviewContent(webview: vscode.Webview): string {
   const appUrl = 'https://codeassist-chat-app.vercel.app';
+  const nonce = getNonce();
 
   return `
     <!DOCTYPE html>
@@ -238,7 +254,7 @@ function getWebviewContent(webview: vscode.Webview): string {
             frame-src ${appUrl};
             style-src 'unsafe-inline' ${webview.cspSource} https://fonts.googleapis.com;
             font-src https://fonts.gstatic.com;
-            script-src 'unsafe-inline';
+            script-src 'nonce-${nonce}';
             connect-src ${appUrl};
         ">
         <style>
@@ -246,8 +262,8 @@ function getWebviewContent(webview: vscode.Webview): string {
         </style>
     </head>
     <body>
-        <iframe id="app-frame" src="${appUrl}"></iframe>
-        <script>
+        <iframe id="app-frame" src="${appUrl}" allow="cross-origin-isolated"></iframe>
+        <script nonce="${nonce}">
             // This script acts as a bridge between the iframe and the VS Code extension host.
             const vscode = acquireVsCodeApi();
             const iframe = document.getElementById('app-frame');
@@ -263,7 +279,10 @@ function getWebviewContent(webview: vscode.Webview): string {
             // 2. Listen for messages from the extension host and forward them to the iframe.
             window.addEventListener('message', event => {
                  if (event.origin !== appOrigin) {
-                    iframe.contentWindow.postMessage(event.data, appOrigin);
+                    // Check if contentWindow is available before posting message
+                    if (iframe && iframe.contentWindow) {
+                        iframe.contentWindow.postMessage(event.data, appOrigin);
+                    }
                  }
             });
         </script>
