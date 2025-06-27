@@ -62,6 +62,12 @@ export function activate(context: vscode.ExtensionContext) {
         const line = document
           .lineAt(position.line)
           .text.substring(0, position.character);
+
+        // Don't trigger on empty lines
+        if (!line.trim()) {
+          return [];
+        }
+
         const panel = createOrShowPanel(context);
 
         // Send request to webview app for inline suggestion
@@ -77,8 +83,12 @@ export function activate(context: vscode.ExtensionContext) {
         // Wait for response from webview (with a timeout)
         const suggestion = await new Promise<string | undefined>((resolve) => {
           lastInlineCompletion = { resolve };
-          setTimeout(() => resolve(undefined), 2000); // 2s timeout
+          setTimeout(() => resolve(undefined), 3000); // 3s timeout
         });
+
+        if (token.isCancellationRequested) {
+          return [];
+        }
 
         if (suggestion) {
           return [
